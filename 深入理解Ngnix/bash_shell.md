@@ -97,3 +97,47 @@ note:
   判断字符串长度是否是0
 
 ```
+
+## uname 命令
+```
+-s 
+  print the kernel name
+
+   例如
+    Linux
+-r
+   print the kernel name
+
+    例如
+    5.15.0-71-generic
+-m  
+    print the machine hardware name
+
+    例如
+    x86_64  
+
+```
+
+## ps 命令
+```
+获取当前进程的快照
+
+-e
+  Select all processes.  Identical to -A.
+  和 -A 一样
+
+-f
+  输出格式选项
+
+
+```
+## kill 命令
+```
+-s,--signal
+  
+
+kill -s  xxx  <pid>
+  对指定进程发送信号
+  
+
+```
