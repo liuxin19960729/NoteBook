@@ -310,3 +310,217 @@ note:
 
 
 ```
+## 2.4 Http核心模块配置一个静态web服务器
+### 2.4.1 虚拟主机域请求分发
+```
+server_name:
+
+http Header Host 属性
+配置优先级
+1.完全匹配
+2.前置通配符匹配
+  例如 *.xx.com
+3.后置通配符匹配
+  www.xx.*
+
+4.正则表达式匹配
+
+
+
+
+如果上述的规则都不匹配按照下列顺序
+1.listen [default|default_server] 的配置
+2.lisen 第一个
+
+
+
+
+note:
+1.server_name:"" 如果http 请求没有Host,会匹配
+2.使用不同的server_name 提供不同的服务
+
+
+
+
+
+
+localtion:
+1.= 完全匹配
+
+location = /{
+  // 只有当用户uri =/ 的时候才会匹配
+} 
+
+
+
+2.~ URI 大小写敏感
+3.~* 忽略大小写敏感
+4.^~ :URI 执行的前面部分匹配即可
+  location ^~ /images/{
+
+  }
+  /images/ 开始的请求匹配即可
+
+5.@ Nginx 内部之间重定向(@ 不直接处理需用请求)
+
+6.正则表达式
+location ~* \.(gif|jpg|jpeg)$
+
+ 
+
+当有多个location 满足匹配,选择的顺序如下
+
+note:
+  如果存在多个匹配URI地址,则会被多个满足条件的第一个匹配
+
+
+  建议: 下面location 放在最后,他会匹配所有的location 
+    location / {
+
+    }
+
+
+
+
+
+
+root
+配置块:
+  http server location if
+# root 文件路劲定义 相对于http 请求的根目录
+
+
+alias
+配置块:
+
+    例如:
+    location /conf{
+      alias /usr/local/nginx/conf/;
+    }
+
+
+
+    URI
+    /conf/nginx.conf
+
+
+    实际访问到文件
+
+    /usr/local/nginx/conf/nginx.conf
+
+
+
+  note:
+
+    URI
+    /conf/nginx.conf
+   root 设置
+
+    location /conf{
+      root  /usr/local/nginx/ 
+    }
+  
+
+
+  alias:实际是URI 实际是路劲映射过程
+ 
+     location /conf{
+      alias /usr/local/nginx/conf/;
+    }
+
+  会被映射为
+
+  URI
+  /conf/nginx.conf
+  
+  path/conf/nignx.conf
+
+
+
+alias 正则表达式匹配 (\w 相当于[a-zA-Z_])
+location ~ ^/test/(\w+)\.(\w.+)${
+  alias /usr/local/nginx/$2/$1.$2
+}
+
+
+URI: /test/nginx.conf
+上面的正则表达式匹配到的文件地址
+/usr/local/nignx/conf/nginx.conf
+
+
+
+
+
+index file ...；
+
+        location / {
+            # root 文件路劲定义 相对于http 请求的根目录
+            root   html;
+            index  /index.html /html/indexphp /index.php;
+        }
+
+
+
+
+
+
+
+
+error_page[code....][=!=answer-code][uri|@named_location]
+error_page  404              /404.html;
+
+
+
+ error_page   500 502 503 504  /50x.html;
+
+
+note:
+  通过上面的配置虽然被重定向了 URI 但是默认返回错误码不会改变
+
+
+  =修改返回的错误码
+  error_page 404 = 200 /empty.gif;
+
+
+
+发生请求错误,重定向到另一个location
+
+location /(
+  error_page 404 @fallback;
+)
+
+
+
+location @fallback(
+  proxy_pass https://backend;
+)
+
+
+返回的404 会被反向代理到https://backend 上游服务器中处理
+
+
+
+
+
+
+
+recursive_error_pages 
+
+  能否允许地柜使用error_page
+
+默认:  recursive_error_pages  off；
+
+
+
+
+
+try_files
+
+Syntax:	try_files file ... uri;
+try_files file ... =code;
+Default:	—
+Context:	server, location
+
+
+
+```
