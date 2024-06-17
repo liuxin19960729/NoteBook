@@ -128,7 +128,28 @@ kill -s SIGHUP <nginx master pid>
 ```
 ### 12 日志回滚
 ```
+nginx -s reopen
+关闭当前日志文件 重新打开一个
+
+使用场景:
+    当日志文件过大的时候是,使用该命令将老的日志移动到其他存储介质
+
+
+
+等效
+
+kill -s SIGUSER1 <nginx master pid>
 
 ```
+### 平滑升级Nginx
+```
+kill -s SIGUSR2 <nginx master pid>
 
+nginx 流程
+1./xxx/..../logs/nginx.pid 会重命名为   /xxx/..../logs/nginx.pid.oldbin
 
+2.启动新的nginx,新旧Nginx 同时运行
+
+3.通过kill 命令 向master 发送 SIGQUIT 信号,以优雅的方式关闭old Nginx
+
+```
