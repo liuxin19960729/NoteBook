@@ -220,4 +220,29 @@ c (carry/进位)
 o (overflow)
 
 
+The conditional instructions have three base forms:
+1. j for conditional jump, 
+2. cmov for conditional move,and set for condition set
+3. The suffix of the instrustion has one of the 30 forms :
+    s ns z nz c nc o no p np pe po e ne l nl le nle g ng ge nge a na ae nae b nb be nbe.
+
+```
+
+## Command Line Arguments
+```
+int main(int argc,char *[] argv)
+
+argc will end up rdi, and 
+argv (a pointer )will ened up in  rsi.
+ 
+
+```
+## A Longer Example
+```
+Note that as far as the C Library is concerned ,command line 
+arguments are always strings. if you want to treat them as intergers, call atoi.
+
+Here' s neat(adj 小巧的 简洁的) program to compute x^y
+
+
 ```
