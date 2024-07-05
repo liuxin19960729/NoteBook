@@ -223,9 +223,37 @@ mode= mode&(~umask)
     1101  ~2
     0100   4  r
 
+```
+### 2.1.4 creat() 函数
+```c
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+int creat(const char *pathname, mode_t mode);
+
+相当于
+
+open(const char *pathname,O_CREAT|O_WRONLY|O_TRUNC,mode)
+
+
+note:
+   在大多数Linux 架构中creat() 是一个系统调用
+```
+### 2.1.5 返回值和错误码
+```
+错误  返回 -1  并把  errno 设置成相应的错误值
+
+```
+## 2.2 通过read() 读取文件
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t count);
 
 
 ```
+
+
+
 ### 2.3.2 Append(追加)模式
 ```
 Append 模式 
