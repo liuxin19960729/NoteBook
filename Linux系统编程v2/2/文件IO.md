@@ -745,6 +745,111 @@ IO 多路复用:
 ```
 
 ### 2.10.1 select()
-```
+```c
+#include <sys/select.h>
 
+int select(int nfds, fd_set *readfds, fd_set *writefds,fd_set *exceptfds, struct timeval *timeout);
+
+void FD_CLR(int fd, fd_set *set);
+int  FD_ISSET(int fd, fd_set *set);
+void FD_SET(int fd, fd_set *set);
+void FD_ZERO(fd_set *set);
+
+
+
+
+readfds 监听是否数据可读
+
+
+writefds 监听某个写操作是否可以无阻塞完成
+exceptfds  监听是否有异常, 可以指定为NULL
+
+
+
+
+
+
+struct timeval {
+  time_t      tv_sec;         /* seconds */
+  suseconds_t tv_usec;        /* microseconds */
+};
+
+
+timeout:  
+  在指定的时间后没有IO准别就绪,调用会返回
+
+
+note:
+  每次调用表select 的时候timeval 重新定义
+
+  Linux：
+     会修改 timeval 对应的值 
+    
+
+
+例如 
+   tv_sec =5
+   在地3s有准备好的IO,tv_sec=2(会被修改)
+
+
+
+fd_set writesfds; 
+FD_ZERO(&writesfds); // 删除指定集合所有文件描述符
+
+FD_SET(fd,&writesfds);// 向 writesfds 集合中添加fd 文件描述符
+
+FD_CLR(fd,&writesfds); // 从 writesfds 删除fd文件描述符
+
+FD_ISSET(fd,&writesfds)  检查 writesfds 中是否有fd
+
+```
+**返回值和错误码**
+```c
+int select(int nfds, fd_set *readfds, fd_set *writefds,fd_set *exceptfds, struct timeval *timeout);
+
+
+return 0
+      -1 error
+
+
+
+EBADF:
+  非法文件描述符
+EINTR:
+  等待时捕获Interrupt
+
+EINVAL:
+   fd < 0
+   timeout 设置为非法值
+
+ENOMEM:
+    没有足够的内存来完成该请求
+
+
+```
+**pselect()**
+```c
+       int pselect(int nfds, fd_set *readfds, fd_set *writefds,
+                   fd_set *exceptfds, const struct timespec *timeout,
+                   const sigset_t *sigmask);
+
+   Feature Test Macro Requirements for glibc (see feature_test_macros(7)):
+
+       pselect(): _POSIX_C_SOURCE >= 200112L
+
+      
+
+
+note:
+ 1. pselect 不会修改 timeout, 后续不需要 重新初始化
+ 2. sigmask 未 NULL ,则 pselect() 和 select() 没有区别
+ 
+
+
+
+
+为什么pselect的存在
+  1.为了解锁文件描述符和信号之间等待而出现竞争条件
+
+note:第10章 信号
 ```
