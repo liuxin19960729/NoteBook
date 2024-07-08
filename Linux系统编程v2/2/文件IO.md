@@ -250,19 +250,232 @@ note:
 ssize_t read(int fd, void *buf, size_t count);
 
 
+return -1 error,EOF 读取完毕 or 当前读取到的字节数
+
+
+
+// code1:
+nr=read(fd,&buf,sizeof(buf));
+
+if(nr==-1){
+    // error
+}
+
+
+code1 存在两个问题
+   未读取到count 个数返回，产生某些可操作的错误
+   
+   没有对上面的情况检查和处理
+
+
+
+```
+### 2.2.1 返回值
+```c
+nr=read(fd,&buf,sizeof(buf));
+
+A:
+0< nr < count 有哪些原因
+1.读取过程中信号中断
+2.读取数据过程中出现错误
+   管道fd--管道被破坏
+3.可读取的数据  大于 0 小于 sizeof(buf)
+
+
+
+B:
+nr==0
+  fd offset 到达文件结尾
+
+  note:
+  socket or  device fd 阻塞模式读取 如果当前没有数据可读,使用的是阻塞模式打开,read() 会等待到有数据读取并返回读取的数据
+
+C：
+nr==-1
+  可恢复的错误
+    1.未读取到任何数据被信号打断 此时errno 被设置成EINTR
+
+      解决方式:
+       从新读取去读取数据 
+    2.非阻塞模式
+       当前没有数据可以使用,errno EAGAIN
+        请求稍后去重新读取数据
+
+ 
+ 不可恢复的错误
+    errno 非 EINTR 和  非EAGAIN
+    这种情况下就没有必要再重新去读取数据因为仍然会返回错误
+  
+
+D:
+  nr==sizeof(buf)
+    buf 存取的个数是预期的数据
+
+```
+### 2.2.2 读入所有字节
+```c
+ssize_t ret;
+// len!=0 判断是否读取指定的长度
+while(len !=0&&(ret=read(fd,buf,len))!=EOF){
+    if(ret==-1){
+        // 可恢复的错误
+       if(errno==EINTR){// 信号中断
+           continue;
+       }
+       perror("read"); //不可恢复错误
+       break;
+    }
+
+    len-=ret;//读取长度更新
+    buf+=ret;//缓冲区指针更新
+}
 ```
 
+### 2.2.3 非阻塞读
+```c
+使用非阻塞读取的原因:
+   1.不希望再读取数据的时候没有可读数据的时候阻塞(socket or devicd等)
+     并且希望在没有可读数据的时候立即返回
 
+   2.读取多个文件,当前没有可读数据立即返回,可以去读取其他文件数据。
+
+
+
+  fd=open(name,O_NONBLOCK)
+
+  char buf[BUFSIZ];
+  ssize_t nr;
+  nr=read(fd,buf,len);
+
+  if(nr==-1){
+      if(errno==EAGAIN){
+         //resubmit later
+      }else if(errno==EINTR){
+        goto start;
+      }else{
+         // 不可恢复错误
+      }
+  }
+
+```
+### 2.2.4  其他错误
+```c
+read() errno 可能会出现的错误
+EBADF:文件描述符非法,或者fd不是可读模式
+EFAULT:buf 缓冲区指针不在进程可使用内
+EINVAL:文件描述符指向的对象不允许读
+EIO:底层错误
+
+```
+### 2.2.5 read()调用的大小限制
+```c
+#include <unistd.h>
+ssize_t read(int fd, void *buf, size_t count);
+
+ssize_t  size_t 是由POSIX 确定的
+32 os  
+     c语言通常的类型是
+     int  or  unsigned int
+
+note:
+   上面代码需要做以下判定
+
+   if(len> SSIZE_MAX){
+    len=SSIZE_MAX;
+   }
+```
+
+## 2.3 调用write()写
+```c
+#include <unistd.h>
+ssize_t write(int fd, const void *buf, size_t count);
+
+count: buf 中最多写入的个数
+
+write 会从当前文件的pos开始写入
+note:
+  字符设备不允许 seek pos 总是从起始位置开始写入
+
+
+
+return 
+1.返回写入的byte 个数
+2.-1 写入错误 并且 设置 errno
+3. 0表示写入0个字节,并没有特殊的意义
+
+```
+### 2.3.1部分写入
+```c
+1.和 read() 相比 write 不太会可能写入部分数据
+2.不存在EOF 场景
+3.write() 调用保证 除非发生错误，write 会写入整个请求
+   note: 只在写入普通文件保证
+
+
+
+普通文件
+   不需要循环写操作
+
+
+其他类型文件
+   socket
+   需要循环保证写入所有请求数据
+  
+
+
+ssize_t ret;
+// len!=0 表示写入只写入部分数据到kernel 缓冲区
+while(len !=0&&(ret=write(sockfd,buf,len))!=EOF){
+    if(ret==-1){
+        // 可恢复的错误
+       if(errno==EINTR){// 信号中断
+           continue;
+       }
+       perror("read"); //不可恢复错误
+       break;
+    }
+
+
+
+    len-=ret;//写入长度更新
+    buf+=ret;//缓冲区指针更新
+}
+```
 
 ### 2.3.2 Append(追加)模式
-```
-Append 模式 
-   保证文件位置总是指向文件末尾(即使多个进程向同一文件写入数据)
+```c
 
-    Append 模式可以理解为每次写请求之前的文件位置更新是原子操作的
+fd=open(name,O_APPEND);
+每次写入数据都是从文件末尾开始写入数据
+
+当多个进程 线程同时向同一个文件并且都指定O_APPEND 的模式开始写入数据
+这样就能保证每次任何一个进程向文件写入数据都在最后写入
+  
+  O_APPEND 没次开始写入写入和更新pos 都是原子的
+
+
 
 应用场景:
   日志更新
+
+```
+### 2.3.3 非阻塞写入
+```c
+fd=open(name,O_NONBLOCK);
+
+write(fd,buf,len) return -1 errono EAGAIN 
+可恢复错误 过一会儿重新写
+
+note:
+   对弈普通文件一般不会 return -1 errono EAGAIN 
+```
+### 2.3.4 其他错误码
+```c
+EBADF:文件描述符非法,或者fd不是写读模式
+EFAULT:buf 缓冲区指针不在进程可使用内
+EFBIG:写入数据超过进程最大文件限制或内部设置限制
+EINVAL:文件描述符指向的对象不允许写
+EIO:底层错误
 
 ```
 
@@ -279,5 +492,259 @@ note:
   
   linux kernel 2.6 以前,更加严格
   所有的操作都必须和文件系统的逻辑块大小对齐(4k),为了保持兼容,应用需要对齐到更大逻辑块的大小(增加了操作难度)
+
+```
+## 2.6 关闭文件
+```c
+#include <unistd.h>
+int close(int fd);
+
+close() kernel 会取消fd与关联文件之间的映射
+fd 不在有效, fd 值会被内核重新利用
+
+
+retrun -1 error 
+
+
+note:
+ 1.
+  close(fd) 并不意味着内容已经被存入到磁盘
+
+
+  fsync(fd);//or fdatasync(fd)  sync()
+
+  if(close(fd)==-1){
+    perror("close");
+    return;
+  }
+
+  //此时才能保证数据已经写入到磁盘
+
+
+
+  2.
+    文件/文件夹删除
+    
+    1.close() 2.inode 没有引用数量
+    2.os将会处理inode,
+    3.这个时候才会真正的删除
+```
+**错误码**
+```
+note:
+  close() 的 errno 不会出现EINTR
+```
+## 2.7 用 lseek() 查找
+```c
+#include <sys/types.h>
+#include <unistd.h>
+off_t lseek(int fd, off_t offset, int whence);
+
+return 
+   -1 error
+   or cur offest
+
+
+whence:
+  SEEK_SET:
+      相对于文件开始的位置 设置 offset
+      
+  SEEK_CUR:
+     cur offest + offset
+     offset 可以是 <0  ==0  >0
+     
+  SEEK_END:
+     file length + offset
+        offset 可以是 <0  ==0  >0
+
+      
+
+例如
+1.设置 offset 文件 1825
+off_t ret;
+
+ret =lseek(fd,1825,SEEK_SET);
+
+if(fd==(off_t)-1){
+  perror("lseek")
+  return;
+}
+
+
+2.将offset 设置当前文件的末尾
+
+off_t ret;
+ret =lseek(fd,0,SEEK_END);
+
+
+if(fd==(off_t)-1){
+  perror("lseek")
+  return;
+}
+
+
+
+
+note:
+  获取当前位置
+
+off_t pos;
+ret =lseek(fd,0,SEEK_CUR);
+
+
+if(fd==(off_t)-1){
+  perror("lseek")
+  return;
+}
+
+//pos 就是当前文件的位子
+
+```
+### 2.7.1 文件末尾查找
+```c
+off_t ret;
+ret =lseek(fd,1688,SEEK_END);
+
+
+if(fd==(off_t)-1){
+  perror("lseek")
+  return;
+}
+
+
+write(fd,buf,count);
+
+
+note:
+   中间空洞的空间会用0来填充
+
+   UNIX: 文件系统吧空洞不展通任何物理空间
+          意味着文件系统数据 >= 磁盘数据
+
+```
+### 2.7.2 文件末尾查找
+```c
+EBADF:
+  fd 不是open 的文件描述符
+
+EINVAL:
+  off_t lseek(int fd, off_t offset, int whence);
+  whence 参数这设置错误
+  结果 offset 是相对与文件开始位置负数
+
+EOVERFLOW:
+  返回的结果不能通过 off_t 表示
+  note:
+     只有32 位的操作系统才会出现该错误
+
+ESPIPE:
+    fd 不支持 lseek() 操作
+
+    例如:
+        管道 pipe socket
+
+```
+
+### 2.7.3 限制
+```
+off_t 大部分计算机会定义为 C long 类型
+
+note:
+  C  标准规定 long 的最小不小于 32 bits
+
+but:
+  内核实现把偏移量值存储位long long 类型 
+
+  note:
+    64 bit os  long 类型 64 bits
+
+    
+    而 32 bits long 类型 通常 32 bits ,如果offset 超过该范围
+    errno EOVERFLOW
+  
+```
+## 2.8 定位读写
+```c
+ #include <unistd.h>
+ ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+ ssize_t pwrite(int fd, const void *buf, size_t count, off_t offset);
+
+
+
+
+_XOPEN_SOURCE >= 500
+|| /* Since glibc 2.12: */ _POSIX_C_SOURCE >= 200809L
+
+
+note:
+   1.pread 和 pwrite 调用 不会更改 cur offset
+   2. pread 和 pwrite 相比于
+      lseek() +(read() or write()) 避免了 lseek() 时出现的数据竞争
+```
+**错误码**
+```
+pread()==-1
+  errno 可能会插线 read() or lseek 的  errno
+
+pwrite()==-1
+  errno 可能会插线 write() or lseek 的  errno
+
+```
+## 2.9 文件截断
+```c
+#include <unistd.h>
+#include <sys/types.h>
+int truncate(const char *path, off_t length);
+int ftruncate(int fd, off_t length);
+
+
+return 
+    succ : 返回文件长度为指定len
+
+
+
+note:
+  len > 文件长度 
+
+  这种情况是允许的,会出现文件空洞
+
+```
+## 2.10 I/0 多路复用
+```c
+前面讲的非阻塞I/0
+  
+  fd= open(name,O_NONBLOCK)
+
+  ret =read(fd,buf,count)
+
+  or 
+  
+  ret =write(fd,buf,count)
+
+
+ret ==-1  && errno == EAGAIN 需要在次请求 判断是否可以写入和读取
+
+
+如果是桌面程序 or 高效的程序 上面的这种非阻塞方式设计的非常糟糕
+   因为 如果需要做某件事 需要 去轮询调用
+
+
+
+
+IO 多路复用:
+  多个文件描述符阻塞,直到某个fd 收到 可读 or 可写 的消息 进程会收到对应的消息
+  
+
+ IO 多路复用设计遵循
+    1.任何一个文件准备就绪通知
+    2.没有任何一文件描述符可用之前处于休眠状态
+    3.有文件描述符可以,会被唤醒
+    4.处理所有的IO就绪的文件描述符,没有阻塞
+    5.返回第一个重新开始
+
+```
+
+### 2.10.1 select()
+```
 
 ```
