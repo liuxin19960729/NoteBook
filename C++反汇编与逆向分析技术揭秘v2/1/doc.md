@@ -1,5 +1,5 @@
 ## 1.7 反汇编引擎的工作原理
-```
+```c
 Intel指令由6部分组成
     1.Instruction prefexies 
        指令前缀作为指令不从信息
@@ -92,7 +92,7 @@ PUSH imm16
 
 
 
-2. push  16bits立即数
+2. push  8bits立即数
   	PUSH imm8
 
 push 指令 opcode 6A
@@ -102,6 +102,21 @@ push 指令 opcode 6A
   }else{// 正数
     
   }
+
+
+
+
+
+假设字符串为机器志林编码
+
+unsigned char szAsmData[]={
+    0x6A, 0x00 ; push 0x00 // puss imm8
+    0x68 ,0x00,0x30,0x40,0x00 ;//push 0x00403000
+    0x50,// push eax 
+    0x51,//push ecx
+    0x52,//push edx
+    0x53 //push ebx
+}
 
 
 
