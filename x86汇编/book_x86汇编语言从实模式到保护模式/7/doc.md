@@ -88,6 +88,7 @@ FLAGS 寄存器 可以通过改变标志位来改变处理器的运行状态
 例如:
   DF(Direction Flag):
     通过对 DF 设置 0 1 来设置movsb 和 movsw 传送的方向
-
+    cld DF=0 低->高
+    std DF=1 高->低
 
 ```
