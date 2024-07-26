@@ -260,4 +260,31 @@ note:
     but 除了 乘法 和 除法 指令除外
 
 
+   
+    div:无符号除法
+   
+
+    idiv (signed Divide) 处理专门提供有符号除法--无符号数不能通过下列来使用
+      
+       例如:
+        mov ax, ox0400
+        mov bl,0xf0
+        idiv bl;  // al 内容  0xc0   十进制 -64
+    
+
+        
+
+      note:
+        -3904/16 结果 是 -244 ，上面的 al不能存储-244 结果
+
+       xor dx, dx,
+       mov ax, 0xf0c0
+       cwd ;eax 0xffff f0c0
+       mov bx,0x10  
+       idiv bx ;ax 值 未 0xff0c
+        
+```
+## 7.8 数位的显示
+```
+
 ```
