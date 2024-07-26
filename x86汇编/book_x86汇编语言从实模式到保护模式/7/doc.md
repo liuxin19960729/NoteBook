@@ -53,22 +53,6 @@ ES:DI  目标位置段地址:偏移地址
     SI ,DI 传送一次自动-1
 
 
-flags:
-  标志寄存器
-
-  6bit
-    ZF   1 算数or 逻辑运算是否0
-
-  6bit
-    DF (direction flag)
-    内存操作方向
-    cld:
-      DF 清零 
-    std 
-      DF =1 高地址 到地址
-
-
-
 cx 计算器指定 rep 重复次数
 rep movsw/movsb  
 
@@ -90,5 +74,71 @@ FLAGS 寄存器 可以通过改变标志位来改变处理器的运行状态
     通过对 DF 设置 0 1 来设置movsb 和 movsw 传送的方向
     cld DF=0 低->高
     std DF=1 高->低
+
+
+
+note:
+   单纯的movsb movsw 只能执行一次 
+   rep movsb  or  rep movsw  则会重复的 CX 为 0 结束
+
+```
+## 7.6 使用循环分解数位
+```
+loop digit 
+    CX : 指定 循环的次数
+    loop 重复执行一段相同的代码
+    CX= CX -1
+    if(CX!=0){
+       jmp digit;
+    }
+
+
+编译器 计算位置 (会被编译器计算出相对于当前 loop 的相对位置)
+     digit = 标号汇地址 -下一条汇编地址 
+
+
+
+
+note:
+    在8086处理器上只有 bx si di bp 来提供偏移地址
+mov[bx]
+mov[si]
+mov[di]
+mov[bp]
+
+  note:
+      bx最初的功能就是提供数据访问的基地址
+
+
+每个寄存最初设计都有自己的特殊用途
+  ax:累加器
+  cx:计数器
+  dx:数据寄存器,还用于和外部设备之间数据传送
+  si:(source index) 寄存器 
+  di:(destination index) 寄存 
+
+
+
+add bx ,1
+or
+inc al
+inc byte [bx] ; segement<<4+bx 内存地址的内容 +1
+inc word [label_a] ;
+
+
+dec al; al register 内容 -1
+
+
+```
+## 7.7 计算机中的负数
+### 7.7.1 无符号数和有符号数
+```
+
+-1 编译器编译后
+0xff=1111 111B=0x00-0x01 =......ffff 
+
+
+
+
 
 ```
